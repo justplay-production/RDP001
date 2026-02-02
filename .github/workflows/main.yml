@@ -27,24 +27,9 @@ jobs:
 
           Restart-Service -Name TermService -Force
 
-      - name: Create RDP User with Secure Password
+      - name: Create RDP User (Password FIX)
         run: |
-          Add-Type -AssemblyName System.Security
-
-          $chars = @{
-            Upper = [char[]](65..90)
-            Lower = [char[]](97..122)
-            Num   = [char[]](48..57)
-            Spec  = ([char[]](33..47) + [char[]](58..64) + [char[]](91..96) + [char[]](123..126))
-          }
-
-          $pass = @()
-          $pass += $chars.Upper | Get-Random -Count 4
-          $pass += $chars.Lower | Get-Random -Count 4
-          $pass += $chars.Num   | Get-Random -Count 4
-          $pass += $chars.Spec  | Get-Random -Count 4
-
-          $password = -join ($pass | Sort-Object { Get-Random })
+          $password = -join ((65..90) + (97..122) + (48..57) | Get-Random -Count 16 | ForEach-Object { [char]$_ })
           $secure = ConvertTo-SecureString $password -AsPlainText -Force
 
           New-LocalUser -Name "RDP" -Password $secure -AccountNeverExpires
@@ -83,10 +68,9 @@ jobs:
 
       - name: Verify RDP Accessibility
         run: |
-          Write-Host "Tailscale IP: $env:TAILSCALE_IP"
           $test = Test-NetConnection -ComputerName $env:TAILSCALE_IP -Port 3389
           if (-not $test.TcpTestSucceeded) {
-            throw "RDP port 3389 not reachable"
+            throw "RDP port not reachable"
           }
 
       - name: RDP Info & Keep Alive
